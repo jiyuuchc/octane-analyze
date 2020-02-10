@@ -13,6 +13,7 @@ import java.util.stream.IntStream;
 import javax.swing.JFileChooser;
 
 import edu.uchc.octane.core.fitting.Fitter;
+import edu.uchc.octane.core.fitting.leastsquare.DAOFitting;
 import edu.uchc.octane.core.fitting.leastsquare.IntegratedGaussianPSF;
 import edu.uchc.octane.core.fitting.leastsquare.LeastSquare;
 import edu.uchc.octane.core.frameanalysis.LocalMaximum;
@@ -36,18 +37,20 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 
 	// prefs
 	static Preferences prefs_ = null;
-	boolean preProcessBackground_;
+	boolean multiPeakFitting_;
+	// boolean preProcessBackground_;
 	//int watershedThreshold_;
 	int watershedNoise_;
-	double heightMin_;
-	double fittingQualityMin_;
+	//double heightMin_;
+	//double fittingQualityMin_;
 	double resolution_;
 	final private static String IMAGE_RESOLUTION = "imageResolution";
-	final private static String ZERO_BACKGROUND_KEY = "zeroBackground";
+	final private static String MULTI_PEAK_FITTING_KEY = "multiPeakFitting";
+	//final private static String ZERO_BACKGROUND_KEY = "zeroBackground";
 	//final private static String WATERSHED_THRESHOLD_KEY = "threshold";
 	final private static String WATERSHED_NOISE_KEY = "noise";
-	final private static String HEIGHT_MIN_KEY = "minHeight";
-	final private static String FITTING_QUALITY_MIN_KEY = "minFittingQ";
+	//final private static String HEIGHT_MIN_KEY = "minHeight";
+	//final private static String FITTING_QUALITY_MIN_KEY = "minFittingQ";
 
 	//Detect and mark particles in current frame
 	class MarkParticles extends Thread {
@@ -106,8 +109,7 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
  					try {
 						dataset.writeToFile(jc.getSelectedFile().getPath());
 					} catch (IOException err) {
-						IJ.log("Error saving data");
-						IJ.log(err.getMessage());
+						IJ.error("Error saving data", err.getMessage());
 					}
  				}
 			}
@@ -122,20 +124,21 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 		IJ.log("Analyzing particles");
 		
 		final ImageStack stack = imp_.getImageStack();
+		int numOfFrames = stack.getSize();
 
-		results_ = (ArrayList<double []>[])new ArrayList[stack.getSize()];
-		for (int i = 0; i < results_.length; i++) {
+		results_ = (ArrayList<double []>[])new ArrayList[numOfFrames];
+		for (int i = 0; i < numOfFrames; i++) {
 			results_[i] = new ArrayList<double[]>();
 		}
 
-		IntStream.range(0, stack.getSize()).parallel().forEach( frameNumMinus1 -> {
+		IntStream.range(1, numOfFrames + 1).parallel().forEach( frameNumber -> {
 			short [] pixels;
 			synchronized(imp_) {
-				pixels = (short[]) stack.getProcessor(frameNumMinus1 + 1).convertToShortProcessor().getPixels();
+				pixels = (short[]) stack.getProcessor(frameNumber).convertToShortProcessor().getPixels();
 			}
 			RectangularShortImage img = new RectangularShortImage(pixels, imp_.getWidth());
-			analyzeOneFrame(img, results_[frameNumMinus1]);
-			IJ.log("Process frame " + (frameNumMinus1 + 1)+ " to obtain " + (results_[frameNumMinus1].size()) + " particles.");
+			analyzeOneFrame(img, results_[frameNumber - 1]);
+			IJ.log("Process frame " + (frameNumber)+ " to obtain " + (results_[frameNumber - 1].size()) + " particles.");
 		});
 		
 		//count total particles
@@ -176,11 +179,12 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 		}
 
 		resolution_ =  prefs_.getDouble(IMAGE_RESOLUTION, 300);
-		preProcessBackground_ = prefs_.getBoolean(ZERO_BACKGROUND_KEY, false);
+		multiPeakFitting_ = prefs_.getBoolean(MULTI_PEAK_FITTING_KEY, false);
+		//preProcessBackground_ = prefs_.getBoolean(ZERO_BACKGROUND_KEY, false);
 		//watershedThreshold_ = prefs_.getInt(WATERSHED_THRESHOLD_KEY, 100);
 		watershedNoise_ = prefs_.getInt(WATERSHED_NOISE_KEY, 100);
-		heightMin_ = prefs_.getDouble(HEIGHT_MIN_KEY, -1);
-		fittingQualityMin_ = prefs_.getDouble(FITTING_QUALITY_MIN_KEY, -1);			
+		//heightMin_ = prefs_.getDouble(HEIGHT_MIN_KEY, -1);
+		//fittingQualityMin_ = prefs_.getDouble(FITTING_QUALITY_MIN_KEY, -1);			
 	}
 
 	/**
@@ -191,37 +195,40 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 			return;
 		}
 		prefs_.putDouble(IMAGE_RESOLUTION, resolution_);
-		prefs_.putBoolean(ZERO_BACKGROUND_KEY, preProcessBackground_);
+		prefs_.putBoolean(MULTI_PEAK_FITTING_KEY, multiPeakFitting_);
+		// prefs_.putBoolean(ZERO_BACKGROUND_KEY, preProcessBackground_);
 		//prefs_.putInt(WATERSHED_THRESHOLD_KEY, watershedThreshold_);
 		prefs_.putInt(WATERSHED_NOISE_KEY, watershedNoise_);
-		prefs_.putDouble(HEIGHT_MIN_KEY, heightMin_);
-		prefs_.putDouble(FITTING_QUALITY_MIN_KEY, fittingQualityMin_);
+		//prefs_.putDouble(HEIGHT_MIN_KEY, heightMin_);
+		//prefs_.putDouble(FITTING_QUALITY_MIN_KEY, fittingQualityMin_);
 	}
 
 	void setupDialog() { 
+
 		loadPrefs();
+		
 		addNumericField("Pixel Size (nm)", pixelSize_, 0);
 		addNumericField("Image Resolution (FWHM) (nm)", resolution_, 1);
-		addCheckbox("Preprocess background", preProcessBackground_);
+		addCheckbox("High Molecular Density", multiPeakFitting_);
 		//addSlider("Intensity Threshold", 1, 40000.0, watershedThreshold_);
 		addSlider("Noise Threshold", 1, 5000.0, watershedNoise_);
-		addSlider("Minimum Intensity", 0, 5000.0, heightMin_);
-		addSlider("Minimum Fitting Quality", 0, 100, fittingQualityMin_);
+		//addSlider("Minimum Intensity", 0, 5000.0, heightMin_);
+		//addSlider("Minimum Fitting Quality", 0, 100, fittingQualityMin_);
 
 		Vector<Scrollbar> sliders = (Vector<Scrollbar>)getSliders();
 		sliders.get(0).setUnitIncrement(20); // default was 1
-		sliders.get(1).setUnitIncrement(5); // default was 1
+		// sliders.get(1).setUnitIncrement(5); // default was 1
 	}
 
 	@Override
 	public boolean readParameters() {
 		pixelSize_ = getNextNumber();
 		resolution_ = getNextNumber();
-		preProcessBackground_ = (boolean) getNextBoolean();
+		multiPeakFitting_ = (boolean) getNextBoolean();
 		//watershedThreshold_ = (int) getNextNumber();
 		watershedNoise_ = (int) getNextNumber();
-		heightMin_ = getNextNumber();
-		fittingQualityMin_ = getNextNumber();
+		//heightMin_ = getNextNumber();
+		//fittingQualityMin_ = getNextNumber();
 		
 		sigma_ = resolution_ / 2.355 / pixelSize_;		
 		kernelSize_ = (int) Math.round(sigma_ * 2.5);
@@ -233,9 +240,14 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 		}
 	}
 
-	void analyzeOneFrame(RectangularImage img, final List<double []> particles) {
+	String [] analyzeOneFrame(RectangularImage img, final List<double []> particles) {
 		LocalMaximum finder = new LocalMaximum(watershedNoise_, 0, kernelSize_);
-		final Fitter fitter = new LeastSquare(new IntegratedGaussianPSF());
+		final Fitter fitter;
+		if (! multiPeakFitting_) {
+			fitter = new LeastSquare(new IntegratedGaussianPSF());
+		} else {
+			fitter = new DAOFitting(new IntegratedGaussianPSF());
+		}
 
 		finder.processFrame(img, new LocalMaximum.CallBackFunctions() {
 			@Override
@@ -247,13 +259,20 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 
 				if (roi_.contains(x, y)) {
 					double [] result = fitter.fit(img, null);
-					if (result != null ) {
+					while (result != null ) {
 						particles.add(result);
+						if (multiPeakFitting_) {
+							result = ((DAOFitting)fitter).getNextResult();
+						} else {
+							result = null; // no next result unless it's multipeakFitting
+						}
 					}
 				}
 				return true;
 			}	
-		});		
+		});
+		
+		return fitter.getHeaders();
 	}
 
 	@Override

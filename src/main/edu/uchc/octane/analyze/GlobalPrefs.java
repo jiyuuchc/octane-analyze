@@ -33,6 +33,7 @@ public class GlobalPrefs {
 
 	final private static String NUM_THREAD_KEY = "numThread";
 	final private static String DEFAULT_PIXEL_SIZE_KEY = "DeaultPixelSize";
+	//final private static String DAO_MAX_MOLECULES_KEY = "daoMaxPeaks"; // max number of PSFs to be fitted in DAOFitting algorithm
 	final private static String PARTICLE_ANALYSIS_MODE_KEY = "ParticleAnalysisMode";
 	final private static String ASTIGMATISM_CALIBRATION_X_KEY = "astigmatismCalibrationX";
 	final private static String ASTIGMATISM_CALIBRATION_Y_KEY = "astigmatismCalibrationY";
@@ -41,6 +42,7 @@ public class GlobalPrefs {
 	
 	public static int nThread_ = prefs_.getInt(NUM_THREAD_KEY , 4);
 	public static double defaultPixelSize_ = Prefs.getDouble(DEFAULT_PIXEL_SIZE_KEY, 108.33);
+	// public static int daoMaxMolecules_ = Prefs.getInt(DAO_MAX_MOLECULES_KEY, 4);
 	public static String particleAnalysisMode_ = Prefs.get(PARTICLE_ANALYSIS_MODE_KEY, "Accurate");
 	public static String calibrationStrX_ = GlobalPrefs.getRoot().get(ASTIGMATISM_CALIBRATION_X_KEY, "0.8, 0, 0.18");
 	public static String calibrationStrY_ = GlobalPrefs.getRoot().get(ASTIGMATISM_CALIBRATION_Y_KEY, "0.8, 6, 0.18");
