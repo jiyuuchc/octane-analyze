@@ -257,7 +257,7 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 				// false stops further processing
 				if (Thread.interrupted()) {return false;}
 
-				if (roi_.contains(x, y)) {
+				if (roi_ == null || roi_.contains(x, y)) {
 					double [] result = fitter.fit(img, null);
 					while (result != null ) {
 						particles.add(result);
