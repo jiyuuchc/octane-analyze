@@ -90,6 +90,11 @@ public class AnalyzePlugin implements PlugIn{
 			return;
 		}
 
+		if (cmd.equals("prefs")) {
+			GlobalPrefs.openDialog(true);
+			return;
+		}
+
 		imp_ = WindowManager.getCurrentImage();		
 		if (imp_ == null || imp_.getStack().getSize() < 2) {
 			IJ.error("This only works on an opened image stack.");
@@ -103,9 +108,7 @@ public class AnalyzePlugin implements PlugIn{
 //		}
 		
 		if (cmd.equals("analyze2D")) {
-
 			dlg_ = new ParticleAnalysisDialog2D(imp_);
-
 		} 
 		
 		linkDialogWithImage();

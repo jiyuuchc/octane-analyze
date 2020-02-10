@@ -28,8 +28,8 @@ import java.util.prefs.Preferences;
 public class GlobalPrefs {
 	private static Preferences prefs_ = Preferences.userNodeForPackage(GlobalPrefs.class); 
 
-	final static String PACKAGE_NAME = "Octane";
-	final static String	VERSIONSTR = "2.0";
+	final static String PACKAGE_NAME = "octane-analyze";
+	final static String	VERSIONSTR = "1.0";
 
 	final private static String NUM_THREAD_KEY = "numThread";
 	final private static String DEFAULT_PIXEL_SIZE_KEY = "DeaultPixelSize";
@@ -40,7 +40,7 @@ public class GlobalPrefs {
 	final private static String OVERLAY_STROKE_WIDTH = "OverlayStrokeWidth";
 	
 	public static int nThread_ = prefs_.getInt(NUM_THREAD_KEY , 4);
-	public static double defaultPixelSize_ = Prefs.getDouble(DEFAULT_PIXEL_SIZE_KEY, 160);
+	public static double defaultPixelSize_ = Prefs.getDouble(DEFAULT_PIXEL_SIZE_KEY, 108.33);
 	public static String particleAnalysisMode_ = Prefs.get(PARTICLE_ANALYSIS_MODE_KEY, "Accurate");
 	public static String calibrationStrX_ = GlobalPrefs.getRoot().get(ASTIGMATISM_CALIBRATION_X_KEY, "0.8, 0, 0.18");
 	public static String calibrationStrY_ = GlobalPrefs.getRoot().get(ASTIGMATISM_CALIBRATION_Y_KEY, "0.8, 6, 0.18");
@@ -84,8 +84,9 @@ public class GlobalPrefs {
 		dlg.showDialog();
 		
 		if (dlg.wasCanceled()) {
-
 			return false;
+		} else {
+			savePrefs();
 		}
 
 		return true;
