@@ -23,6 +23,7 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.gui.PointRoi;
+import ij.gui.Roi;
 
 public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 
@@ -31,6 +32,7 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 	
 	int kernelSize_;
 	double sigma_;
+	Roi roi_;
 
 	// prefs
 	static Preferences prefs_ = null;
@@ -85,6 +87,7 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 	 */
 	public ParticleAnalysisDialog2D(ImagePlus imp) {
 		super(imp, "Particle analysis:" + imp.getTitle());
+		roi_ = imp.getRoi();
 		setupDialog();
 	}
 
@@ -108,8 +111,8 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 					}
  				}
 			}
-
 		}
+		imp_.setRoi(roi_);
 	}
 	
 	public LocalizationDataset processAll() {
@@ -242,9 +245,11 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 				// false stops further processing
 				if (Thread.interrupted()) {return false;}
 
-				double [] result = fitter.fit(img, null);
-				if (result != null ) {
-					particles.add(result);
+				if (roi_.contains(x, y)) {
+					double [] result = fitter.fit(img, null);
+					if (result != null ) {
+						particles.add(result);
+					}
 				}
 				return true;
 			}	
