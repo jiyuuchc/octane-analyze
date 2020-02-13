@@ -12,12 +12,12 @@ import java.util.stream.IntStream;
 
 import javax.swing.JFileChooser;
 
+import edu.uchc.octane.core.datasource.OctaneDataFile;
 import edu.uchc.octane.core.fitting.Fitter;
 import edu.uchc.octane.core.fitting.leastsquare.DAOFitting;
 import edu.uchc.octane.core.fitting.leastsquare.IntegratedGaussianPSF;
 import edu.uchc.octane.core.fitting.leastsquare.LeastSquare;
 import edu.uchc.octane.core.frameanalysis.LocalMaximum;
-import edu.uchc.octane.core.localizationdata.LocalizationDataset;
 import edu.uchc.octane.core.pixelimage.RectangularImage;
 import edu.uchc.octane.core.pixelimage.RectangularShortImage;
 import ij.IJ;
@@ -104,7 +104,7 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 			savePrefs();
 			JFileChooser jc = new JFileChooser();
 			if (jc.showSaveDialog(IJ.getApplet()) == JFileChooser.APPROVE_OPTION) {
-				LocalizationDataset dataset = processAll();
+				OctaneDataFile dataset = processAll();
  				if (dataset != null) {
  					try {
 						dataset.writeToFile(jc.getSelectedFile().getPath());
@@ -117,7 +117,7 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 		imp_.setRoi(roi_);
 	}
 	
-	public LocalizationDataset processAll() {
+	public OctaneDataFile processAll() {
 		if (imp_ == null) {return null;}
 		
 		imp_.killRoi();
@@ -170,7 +170,7 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 				idx++;
 			}
 		}
-		return new LocalizationDataset(data, headers);
+		return new OctaneDataFile(data, headers);
 	}
 
 	public void loadPrefs() {
