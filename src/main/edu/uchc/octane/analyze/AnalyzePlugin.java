@@ -94,6 +94,12 @@ public class AnalyzePlugin implements PlugIn{
 			GlobalPrefs.openDialog(true);
 			return;
 		}
+		
+		if (cmd.equals("quickload")) {
+			MMVirtualStack plugin = new MMVirtualStack();
+			plugin.run(null);
+			return;
+		}
 
 		imp_ = WindowManager.getCurrentImage();		
 		if (imp_ == null || imp_.getStack().getSize() < 2) {

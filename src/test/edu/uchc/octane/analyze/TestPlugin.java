@@ -7,9 +7,9 @@ import ij.ImagePlus;
 public class TestPlugin {
 	public static void main(String ... args) {
         ImageJ imagej = new ImageJ();
-        ImagePlus imp = IJ.openImage();
-        imp.show();
+        //ImagePlus imp = IJ.openImage();
+        //imp.show();
         AnalyzePlugin plugin = new AnalyzePlugin();
-        plugin.run("analyze2D");
+        plugin.run("quickload");
 	}
 }
