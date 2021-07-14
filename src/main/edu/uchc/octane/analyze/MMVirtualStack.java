@@ -33,7 +33,9 @@ public class MMVirtualStack extends FileInfoVirtualStack {
 	
 	private ImagePlus open() {
 		ImagePlus imp = new ImagePlus();
-		imp.setStack("Whatever", this);
+		String name = pathname.replaceAll("[\\/\\\\]$", "");
+		name = name.replaceAll("^.*[\\/\\\\]", "");
+		imp.setStack(name, this);
 		imp.setDimensions(1, 1, size());
 		return imp;
 	}
@@ -94,7 +96,7 @@ public class MMVirtualStack extends FileInfoVirtualStack {
 	
 	@Override
 	public ImageProcessor getProcessor(int n) {
-		n = translate(n);
+		// n = translate(n);
 		if (n < 1 || n > nFrames)
 			throw new IllegalArgumentException("Frame number out of range.");
 
