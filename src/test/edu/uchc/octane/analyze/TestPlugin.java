@@ -11,5 +11,6 @@ public class TestPlugin {
         //imp.show();
         AnalyzePlugin plugin = new AnalyzePlugin();
         plugin.run("quickload");
+        plugin.run("analyze2D");
 	}
 }

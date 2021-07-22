@@ -17,6 +17,8 @@ import edu.uchc.octane.core.fitting.Fitter;
 import edu.uchc.octane.core.fitting.leastsquare.DAOFitting;
 import edu.uchc.octane.core.fitting.leastsquare.IntegratedGaussianPSF;
 import edu.uchc.octane.core.fitting.leastsquare.LeastSquare;
+import edu.uchc.octane.core.fitting.maximumlikelihood.PoissonLogLikelihoodSymmetric;
+import edu.uchc.octane.core.fitting.maximumlikelihood.Simplex;
 import edu.uchc.octane.core.frameanalysis.LocalMaximum;
 import edu.uchc.octane.core.pixelimage.RectangularImage;
 import edu.uchc.octane.core.pixelimage.RectangularShortImage;
@@ -39,7 +41,7 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 	static Preferences prefs_ = null;
 	boolean multiPeakFitting_;
 	// boolean preProcessBackground_;
-	//int watershedThreshold_;
+	// int watershedThreshold_;
 	int watershedNoise_;
 	//double heightMin_;
 	//double fittingQualityMin_;
@@ -68,6 +70,7 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 					yi[i] = (int) (particles.get(i)[1] + 0.5);
 				}
 				roi = new PointRoi(xi, yi, particles.size());
+				roi.setOptions("dot");
 				imp_.setRoi(roi);
 			}			
 		}
@@ -244,7 +247,8 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 		LocalMaximum finder = new LocalMaximum(watershedNoise_, 0, kernelSize_);
 		final Fitter fitter;
 		if (! multiPeakFitting_) {
-			fitter = new LeastSquare(new IntegratedGaussianPSF());
+			//fitter = new LeastSquare(new IntegratedGaussianPSF());
+			fitter = new Simplex(new PoissonLogLikelihoodSymmetric(100, 2.5));
 		} else {
 			fitter = new DAOFitting(new IntegratedGaussianPSF());
 		}
