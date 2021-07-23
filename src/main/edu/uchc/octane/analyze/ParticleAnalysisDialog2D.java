@@ -12,14 +12,17 @@ import java.util.stream.IntStream;
 
 import javax.swing.JFileChooser;
 
+import org.apache.commons.math3.util.FastMath;
+
 import edu.uchc.octane.core.datasource.OctaneDataFile;
 import edu.uchc.octane.core.fitting.Fitter;
 import edu.uchc.octane.core.fitting.leastsquare.DAOFitting;
 import edu.uchc.octane.core.fitting.leastsquare.IntegratedGaussianPSF;
 import edu.uchc.octane.core.fitting.leastsquare.LeastSquare;
-import edu.uchc.octane.core.fitting.maximumlikelihood.PoissonLogLikelihoodSymmetric;
 import edu.uchc.octane.core.fitting.maximumlikelihood.Simplex;
+import edu.uchc.octane.core.fitting.maximumlikelihood.SymmetricErf;
 import edu.uchc.octane.core.frameanalysis.LocalMaximum;
+import edu.uchc.octane.core.pixelimage.RectangularDoubleImage;
 import edu.uchc.octane.core.pixelimage.RectangularImage;
 import edu.uchc.octane.core.pixelimage.RectangularShortImage;
 import ij.IJ;
@@ -29,6 +32,9 @@ import ij.gui.PointRoi;
 import ij.gui.Roi;
 
 public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
+
+	final static double bg_offset = 100.0;
+	final static double cnts_per_photon = 2.5;
 
 	List<double[]> [] results_;
 	volatile Thread prevProcess_ = null;
@@ -58,7 +64,7 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 	class MarkParticles extends Thread {
 		List<double[]> particles;
 
-		void showRoi() {
+		void showRoi(List<double[]> particles) {
 			imp_.killRoi();
 
 			if (particles.size() > 0) {
@@ -77,13 +83,8 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 
 		@Override
 		public void run() {
-			particles = new ArrayList<double []>();
-			short [] pixels = (short[]) imp_.getProcessor().convertToShortProcessor().getPixels();
-			RectangularShortImage img = new RectangularShortImage(pixels, imp_.getWidth());			
-
-			analyzeOneFrame(img, particles);			
-
-			showRoi();
+			List<double[]> particles = analyzeOneFrame();
+			showRoi(particles);
 		}
 	}
 
@@ -129,18 +130,10 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 		final ImageStack stack = imp_.getImageStack();
 		int numOfFrames = stack.getSize();
 
-		results_ = (ArrayList<double []>[])new ArrayList[numOfFrames];
-		for (int i = 0; i < numOfFrames; i++) {
-			results_[i] = new ArrayList<double[]>();
-		}
+		results_ = new ArrayList[numOfFrames];
 
 		IntStream.range(1, numOfFrames + 1).parallel().forEach( frameNumber -> {
-			short [] pixels;
-			synchronized(imp_) {
-				pixels = (short[]) stack.getProcessor(frameNumber).convertToShortProcessor().getPixels();
-			}
-			RectangularShortImage img = new RectangularShortImage(pixels, imp_.getWidth());
-			analyzeOneFrame(img, results_[frameNumber - 1]);
+			results_[frameNumber - 1] = analyzeOneFrame();
 			IJ.log("Process frame " + (frameNumber)+ " to obtain " + (results_[frameNumber - 1].size()) + " particles.");
 		});
 		
@@ -151,7 +144,7 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 		}
 		
 		// convert the results to 2D array and LocalizationDataset object
-		String [] tmpHeaders = new IntegratedGaussianPSF().getHeaders();
+		String [] tmpHeaders = (new SymmetricErf()).getHeaders();
 		String [] headers = Arrays.copyOf(tmpHeaders, tmpHeaders.length+1);
 		headers[headers.length-1] = "frame";
 
@@ -243,40 +236,47 @@ public class ParticleAnalysisDialog2D extends ParticleAnalysisDialogBase {
 		}
 	}
 
-	String [] analyzeOneFrame(RectangularImage img, final List<double []> particles) {
-		LocalMaximum finder = new LocalMaximum(watershedNoise_, 0, kernelSize_);
-		final Fitter fitter;
-		if (! multiPeakFitting_) {
-			//fitter = new LeastSquare(new IntegratedGaussianPSF());
-			fitter = new Simplex(new PoissonLogLikelihoodSymmetric(100, 2.5));
-		} else {
-			fitter = new DAOFitting(new IntegratedGaussianPSF());
+	ArrayList<double[]> analyzeOneFrame() {
+		float [] pixels;
+		ArrayList<double[]> particles = new ArrayList<double[]>(); 
+		Fitter fitter = new Simplex(new SymmetricErf());
+
+		synchronized(imp_) {
+			pixels = (float[]) imp_.getProcessor().convertToFloatProcessor().getPixels();
 		}
+
+		RectangularDoubleImage img = new RectangularDoubleImage(pixels, imp_.getWidth());
+		for (int i = 0; i < img.getLength(); i ++ ) {
+			img.setValue(i, (img.getValue(i) - bg_offset) / cnts_per_photon);
+		}
+
+		LocalMaximum finder = new LocalMaximum(watershedNoise_, 0, kernelSize_);
 
 		finder.processFrame(img, new LocalMaximum.CallBackFunctions() {
 			@Override
-			public boolean fit(RectangularImage img, int x, int y) {
+			public boolean fit(RectangularImage subimg, int x, int y) {
 				// System.out.println("Location " + (c++) +" : " + x + " - " + y + " - " + img.getValueAtCoordinate(x, y));
-
-				// false stops further processing
-				if (Thread.interrupted()) {return false;}
-
+				if ( Thread.interrupted()) {
+					return true;
+				}
 				if (roi_ == null || roi_.contains(x, y)) {
-					double [] result = fitter.fit(img, null);
-					while (result != null ) {
-						particles.add(result);
-						if (multiPeakFitting_) {
-							result = ((DAOFitting)fitter).getNextResult();
-						} else {
-							result = null; // no next result unless it's multipeakFitting
+					double [] result = fitter.fit(subimg, null);
+					if (result != null ) {
+						if (result[0] < subimg.x0 || result[0] > subimg.x0 + subimg.width || result[1] < subimg.y0 || result[1] > subimg.y0 + subimg.height) {
+							return true;
 						}
+						if (result[3] < 0) {
+							return true;
+						}
+						result[2] = FastMath.abs(result[2]); // make sigma always positive  
+						particles.add(result);
 					}
 				}
 				return true;
 			}	
 		});
-		
-		return fitter.getHeaders();
+
+		return particles;
 	}
 
 	@Override
