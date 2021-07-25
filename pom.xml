@@ -24,7 +24,7 @@
   	<dependency>
   		<groupId>edu.uchc.octane</groupId>
   		<artifactId>octane-core</artifactId>
-  		<version>1.1-SNAPSHOT</version>
+  		<version>1.2-SNAPSHOT</version>
   	</dependency>
   	<dependency>
   		<groupId>net.imagej</groupId>
